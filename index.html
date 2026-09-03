@@ -1,0 +1,1842 @@
+/*
+  ============================================================
+  ÁGUIA APP PRO
+  Lotofácil - análise estatística com 6 motores
+  Compatível com Expo Snack
+  ============================================================
+*/
+
+const API = "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil";
+const ESPELHO = "https://loteriascaixa-api.herokuapp.com/api/lotofacil";
+
+const NAV = [
+  ["inicio", "⌂", "Início"],
+  ["resultado", "●", "Resultado"],
+  ["analise", "▦", "Análise"],
+  ["ia", "✦", "6 IAs"],
+  ["gerar", "✧", "Gerar"],
+  ["jogos", "▣", "Jogos"],
+  ["backtest", "↗", "Backtest"],
+];
+
+const pad = (n) => String(n).padStart(2, "0");
+
+function normalizarDezenas(arr = []) {
+  return arr
+    .map((n) => pad(parseInt(n, 10)))
+    .filter((n) => Number(n) >= 1 && Number(n) <= 25)
+    .sort((a, b) => Number(a) - Number(b));
+}
+
+function normalizarConcurso(c) {
+  if (!c) return null;
+
+  const dezenas =
+    c.dezenas ||
+    c.listaDezenas ||
+    c.dezenasSorteadasOrdemSorteio ||
+    [];
+
+  const numero =
+    c.concurso ||
+    c.numero ||
+    c.numeroConcurso;
+
+  return {
+    concurso: Number(numero),
+    data: c.data || c.dataApuracao || c.dataSorteio || "",
+    dezenas: normalizarDezenas(dezenas),
+    premiacoes: c.listaRateioPremio || [],
+    acumulado: c.acumulado,
+    estimativa: c.valorEstimadoProximoConcurso,
+    fonte: c.fonte || "CAIXA",
+  };
+}
+
+async function fetchJson(url) {
+  const r = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  if (!r.ok) throw new Error("HTTP " + r.status);
+
+  return await r.json();
+}
+
+async function carregarUltimo() {
+  try {
+    const data = await fetchJson(API);
+    return {
+      concurso: normalizarConcurso(data),
+      fonte: "CAIXA",
+    };
+  } catch (e) {
+    const data = await fetchJson(ESPELHO);
+    return {
+      concurso: normalizarConcurso(data[0]),
+      fonte: "ESPELHO",
+    };
+  }
+}
+
+async function carregarHistorico(base, quantidade = 100) {
+  const primeiro = await carregarUltimo();
+
+  if (!primeiro.concurso?.concurso) {
+    throw new Error("Não foi possível identificar o concurso atual.");
+  }
+
+  const atual = primeiro.concurso.concurso;
+  const inicio = Math.max(1, atual - quantidade + 1);
+
+  const numeros = [];
+
+  for (let n = atual; n >= inicio; n--) {
+    numeros.push(n);
+  }
+
+  const resultados = [];
+  const lote = 8;
+
+  for (let i = 0; i < numeros.length; i += lote) {
+    const parte = numeros.slice(i, i + lote);
+
+    const dados = await Promise.all(
+      parte.map(async (numero) => {
+        try {
+          const d = await fetchJson(
+            `${API}/${numero}`
+          );
+
+          const c = normalizarConcurso(d);
+
+          if (c?.dezenas?.length === 15) {
+            return c;
+          }
+
+          return null;
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    resultados.push(...dados.filter(Boolean));
+  }
+
+  resultados.sort((a, b) => b.concurso - a.concurso);
+
+  if (resultados.length === 0) {
+    throw new Error("Histórico vazio.");
+  }
+
+  return {
+    concursos: resultados,
+    fonte: primeiro.fonte,
+  };
+}
+
+/* ============================================================
+   ESTATÍSTICAS
+============================================================ */
+
+function calcularEstatisticas(historico) {
+  const freq = {};
+  const ultimos = {};
+  const ultimaOcorrencia = {};
+
+  for (let n = 1; n <= 25; n++) {
+    freq[pad(n)] = 0;
+    ultimos[pad(n)] = 0;
+    ultimaOcorrencia[pad(n)] = null;
+  }
+
+  historico.forEach((c, indice) => {
+    c.dezenas.forEach((d) => {
+      freq[d]++;
+
+      if (indice < 10) {
+        ultimos[d]++;
+      }
+
+      if (ultimaOcorrencia[d] === null) {
+        ultimaOcorrencia[d] = indice;
+      }
+    });
+  });
+
+  const total = historico.length || 1;
+
+  const ranking = Object.keys(freq).map((d) => {
+    const percentual = (freq[d] / total) * 100;
+
+    const atraso =
+      ultimaOcorrencia[d] === null
+        ? total
+        : ultimaOcorrencia[d];
+
+    return {
+      dezena: d,
+      freq: freq[d],
+      percentual,
+      ultimos10: ultimos[d],
+      atraso,
+    };
+  });
+
+  return {
+    freq,
+    ranking,
+    total,
+  };
+}
+
+/* ============================================================
+   6 MOTORES DE "IA"
+============================================================ */
+
+function analisarIAs(historico) {
+  const stats = calcularEstatisticas(historico);
+
+  const rankingFreq = [...stats.ranking].sort(
+    (a, b) => b.percentual - a.percentual
+  );
+
+  const rankingAtraso = [...stats.ranking].sort(
+    (a, b) => b.atraso - a.atraso
+  );
+
+  const rankingRecente = [...stats.ranking].sort(
+    (a, b) => b.ultimos10 - a.ultimos10
+  );
+
+  /*
+    IA 1 - FREQUÊNCIA
+  */
+  const iaFrequencia = rankingFreq.map((x, i) => ({
+    ...x,
+    score: 100 - i * (100 / 24),
+  }));
+
+  /*
+    IA 2 - ATRASO
+  */
+  const iaAtraso = rankingAtraso.map((x, i) => ({
+    ...x,
+    score: 100 - i * (100 / 24),
+  }));
+
+  /*
+    IA 3 - TENDÊNCIA
+  */
+  const iaTendencia = rankingRecente.map((x, i) => ({
+    ...x,
+    score: 100 - i * (100 / 24),
+  }));
+
+  /*
+    IA 4 - EQUILÍBRIO
+    Preferência por dezenas que ajudam a manter
+    distribuição equilibrada.
+  */
+  const iaEquilibrio = stats.ranking.map((x) => {
+    const n = Number(x.dezena);
+
+    let score = 50;
+
+    if (n <= 5 || (n >= 11 && n <= 15) || n >= 21) {
+      score += 8;
+    }
+
+    if (x.percentual >= 55 && x.percentual <= 65) {
+      score += 20;
+    }
+
+    return {
+      ...x,
+      score: Math.min(100, score),
+    };
+  }).sort((a, b) => b.score - a.score);
+
+  /*
+    IA 5 - PADRÕES
+    Considera repetição do último concurso e presença
+    recente.
+  */
+  const ultimo = historico[0]?.dezenas || [];
+
+  const iaPadroes = stats.ranking.map((x) => {
+    const repetiu = ultimo.includes(x.dezena);
+
+    let score = 45;
+
+    if (repetiu) score += 20;
+    if (x.ultimos10 >= 5) score += 15;
+    if (x.ultimos10 >= 7) score += 10;
+
+    return {
+      ...x,
+      score: Math.min(100, score),
+    };
+  }).sort((a, b) => b.score - a.score);
+
+  /*
+    IA 6 - CONSENSO ÁGUIA
+    Combina os 5 motores.
+  */
+  const consenso = stats.ranking.map((x) => {
+    const a =
+      iaFrequencia.find((v) => v.dezena === x.dezena)?.score || 0;
+
+    const b =
+      iaAtraso.find((v) => v.dezena === x.dezena)?.score || 0;
+
+    const c =
+      iaTendencia.find((v) => v.dezena === x.dezena)?.score || 0;
+
+    const d =
+      iaEquilibrio.find((v) => v.dezena === x.dezena)?.score || 0;
+
+    const e =
+      iaPadroes.find((v) => v.dezena === x.dezena)?.score || 0;
+
+    const score =
+      a * 0.28 +
+      b * 0.15 +
+      c * 0.27 +
+      d * 0.12 +
+      e * 0.18;
+
+    return {
+      ...x,
+      score: Math.round(score),
+    };
+  }).sort((a, b) => b.score - a.score);
+
+  return {
+    frequencia: iaFrequencia,
+    atraso: iaAtraso,
+    tendencia: iaTendencia,
+    equilibrio: iaEquilibrio,
+    padroes: iaPadroes,
+    consenso,
+  };
+}
+
+/* ============================================================
+   GERADOR
+============================================================ */
+
+function gerarJogo(ias, numero = 15) {
+  const ranking = ias.consenso;
+
+  /*
+    Seleciona inicialmente as melhores pontuações.
+  */
+  const candidatos = ranking.slice(0, 20);
+
+  const embaralhado = [...candidatos].sort(
+    () => Math.random() - 0.5
+  );
+
+  let jogo = embaralhado
+    .slice(0, numero)
+    .map((x) => x.dezena);
+
+  /*
+    Garante distribuição razoável entre regiões 1-25.
+  */
+  if (jogo.length === 15) {
+    const faixas = [
+      jogo.filter((n) => Number(n) <= 8).length,
+      jogo.filter((n) => Number(n) >= 9 && Number(n) <= 17).length,
+      jogo.filter((n) => Number(n) >= 18).length,
+    ];
+
+    if (faixas.some((x) => x === 0)) {
+      jogo = ranking
+        .slice(0, 18)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 15)
+        .map((x) => x.dezena);
+    }
+  }
+
+  return [...new Set(jogo)]
+    .sort((a, b) => Number(a) - Number(b))
+    .slice(0, numero);
+}
+
+/* ============================================================
+   BACKTEST
+============================================================ */
+
+function executarBacktest(historico, quantidade = 30) {
+  if (historico.length < 20) {
+    throw new Error("Histórico insuficiente.");
+  }
+
+  const limite = Math.min(
+    quantidade,
+    historico.length - 11
+  );
+
+  const acertos = {
+    11: 0,
+    12: 0,
+    13: 0,
+    14: 0,
+    15: 0,
+  };
+
+  let totalApostas = 0;
+
+  /*
+    MUITO IMPORTANTE:
+    para cada concurso-alvo usamos somente concursos
+    anteriores ao alvo.
+  */
+  for (let i = 0; i < limite; i++) {
+    const alvo = historico[i];
+
+    const anterior = historico.slice(
+      i + 1,
+      i + 51
+    );
+
+    if (anterior.length < 10) continue;
+
+    const ias = analisarIAs(anterior);
+
+    const jogo = gerarJogo(ias, 15);
+
+    const pontos = jogo.filter((d) =>
+      alvo.dezenas.includes(d)
+    ).length;
+
+    if (pontos >= 11) {
+      acertos[pontos]++;
+    }
+
+    totalApostas++;
+  }
+
+  const custo = totalApostas * 3.5;
+
+  return {
+    concursos: totalApostas,
+    acertos,
+    custo,
+  };
+}
+
+/* ============================================================
+   COMPONENTES
+============================================================ */
+
+function Bola({ numero, selecionada = false }) {
+  return (
+    <View
+      style={[
+        styles.bola,
+        selecionada && styles.bolaSelecionada,
+      ]}
+    >
+      <Text style={styles.bolaTexto}>{numero}</Text>
+    </View>
+  );
+}
+
+function CardIA({
+  titulo,
+  icon,
+  descricao,
+  ranking,
+  cor = "#FFC107",
+}) {
+  const melhores = ranking.slice(0, 5);
+
+  return (
+    <View style={styles.cardIA}>
+      <View style={styles.iaHeader}>
+        <View>
+          <Text style={styles.iaTitulo}>
+            {icon} {titulo}
+          </Text>
+          <Text style={styles.iaDescricao}>
+            {descricao}
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.scoreBadge,
+            { borderColor: cor },
+          ]}
+        >
+          <Text style={[styles.scoreText, { color: cor }]}>
+            {Math.round(
+              melhores.reduce(
+                (s, x) => s + (x.score || 0),
+                0
+              ) / Math.max(1, melhores.length)
+            )}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.iaNumeros}>
+        {melhores.map((x) => (
+          <View key={x.dezena} style={styles.iaNumero}>
+            <Text style={styles.iaNumeroTexto}>
+              {x.dezena}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/* ============================================================
+   APP
+============================================================ */
+
+export default function App() {
+  const [aba, setAba] = useState("inicio");
+  const [historico, setHistorico] = useState([]);
+  const [ias, setIas] = useState(null);
+  const [jogos, setJogos] = useState([]);
+  const [backtest, setBacktest] = useState(null);
+
+  const [carregando, setCarregando] = useState(true);
+  const [atualizando, setAtualizando] = useState(false);
+  const [erro, setErro] = useState("");
+  const [fonte, setFonte] = useState("CAIXA");
+
+  const ultimo = historico[0];
+
+  async function carregar() {
+    try {
+      setErro("");
+
+      const resultado =
+        await carregarHistorico(API, 100);
+
+      setHistorico(resultado.concursos);
+      setFonte(resultado.fonte);
+
+      const analises =
+        analisarIAs(resultado.concursos);
+
+      setIas(analises);
+    } catch (e) {
+      console.log(e);
+
+      setErro(
+        "Não foi possível atualizar os concursos agora."
+      );
+    }
+  }
+
+  async function atualizar() {
+    setAtualizando(true);
+
+    await carregar();
+
+    setAtualizando(false);
+  }
+
+  useEffect(() => {
+    carregar().finally(() => setCarregando(false));
+
+    /*
+      Atualização automática.
+      60 segundos.
+    */
+    const timer = setInterval(() => {
+      carregar();
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const estatisticas = useMemo(
+    () => calcularEstatisticas(historico),
+    [historico]
+  );
+
+  function criarJogo() {
+    if (!ias) return;
+
+    const dezenas = gerarJogo(ias, 15);
+
+    const novo = {
+      id: Date.now().toString(),
+      nome: "Águia IA",
+      data: new Date().toLocaleDateString(
+        "pt-BR"
+      ),
+      dezenas,
+    };
+
+    setJogos((old) => [novo, ...old]);
+
+    setAba("jogos");
+  }
+
+  function rodarBacktest() {
+    try {
+      const resultado =
+        executarBacktest(historico, 30);
+
+      setBacktest(resultado);
+    } catch (e) {
+      Alert.alert(
+        "Backtest",
+        e.message
+      );
+    }
+  }
+
+  if (carregando) {
+    return (
+      <View style={styles.loading}>
+        <Text style={styles.logoGrande}>
+          ÁGUIA
+        </Text>
+
+        <Text style={styles.pro}>
+          APP PRO
+        </Text>
+
+        <ActivityIndicator
+          size="large"
+          color="#FFC107"
+          style={{ marginTop: 25 }}
+        />
+
+        <Text style={styles.loadingTexto}>
+          Conectando aos resultados...
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.logo}>
+            🦅 ÁGUIA APP
+          </Text>
+
+          <Text style={styles.logoSub}>
+            LOTOFÁCIL • INTELIGÊNCIA ESTATÍSTICA
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.refresh}
+          onPress={atualizar}
+        >
+          {atualizando ? (
+            <ActivityIndicator color="#FFC107" />
+          ) : (
+            <Text style={styles.refreshTexto}>
+              ↻
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{
+          paddingBottom: 110,
+        }}
+        refreshControl={
+          <RefreshControl
+            refreshing={atualizando}
+            onRefresh={atualizar}
+            tintColor="#FFC107"
+          />
+        }
+      >
+        {erro ? (
+          <View style={styles.alerta}>
+            <Text style={styles.alertaTitulo}>
+              ⚠ Atualização indisponível
+            </Text>
+
+            <Text style={styles.alertaTexto}>
+              {erro}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* =================================================
+            INÍCIO
+        ================================================= */}
+
+        {aba === "inicio" && (
+          <View>
+            <View style={styles.hero}>
+              <Text style={styles.heroMini}>
+                CENTRAL INTELIGENTE
+              </Text>
+
+              <Text style={styles.heroTitulo}>
+                Análise Águia
+              </Text>
+
+              <Text style={styles.heroTexto}>
+                6 motores estatísticos analisando
+                frequência, atraso, tendência,
+                equilíbrio e padrões.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.btnAmarelo}
+                onPress={criarJogo}
+              >
+                <Text style={styles.btnAmareloTexto}>
+                  ✦ GERAR JOGO ÁGUIA
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {ultimo && (
+              <View style={styles.card}>
+                <View style={styles.cardTopo}>
+                  <Text style={styles.cardTitulo}>
+                    ÚLTIMO RESULTADO
+                  </Text>
+
+                  <View style={styles.fonteBadge}>
+                    <Text style={styles.fonteTexto}>
+                      {fonte}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.concurso}>
+                  Concurso {ultimo.concurso}
+                </Text>
+
+                <Text style={styles.data}>
+                  {ultimo.data}
+                </Text>
+
+                <View style={styles.grid}>
+                  {ultimo.dezenas.map((d) => (
+                    <Bola
+                      key={d}
+                      numero={d}
+                      selecionada
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <View style={styles.dupla}>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumero}>
+                  {historico.length}
+                </Text>
+
+                <Text style={styles.statTexto}>
+                  CONCURSOS
+                </Text>
+              </View>
+
+              <View style={styles.statCard}>
+                <Text style={styles.statNumero}>
+                  {jogos.length}
+                </Text>
+
+                <Text style={styles.statTexto}>
+                  JOGOS SALVOS
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitulo}>
+                STATUS DO SISTEMA
+              </Text>
+
+              <View style={styles.statusLinha}>
+                <Text style={styles.statusBolinha}>
+                  ●
+                </Text>
+
+                <Text style={styles.statusTexto}>
+                  Dados carregados
+                </Text>
+              </View>
+
+              <View style={styles.statusLinha}>
+                <Text style={styles.statusBolinha}>
+                  ●
+                </Text>
+
+                <Text style={styles.statusTexto}>
+                  6 motores de análise ativos
+                </Text>
+              </View>
+
+              <View style={styles.statusLinha}>
+                <Text style={styles.statusBolinha}>
+                  ●
+                </Text>
+
+                <Text style={styles.statusTexto}>
+                  Atualização automática: 60s
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* =================================================
+            RESULTADO
+        ================================================= */}
+
+        {aba === "resultado" && (
+          <View>
+            <Text style={styles.tituloPagina}>
+              Resultados
+            </Text>
+
+            <Text style={styles.subPagina}>
+              Histórico atualizado dos concursos
+            </Text>
+
+            {historico.slice(0, 30).map((c) => (
+              <View
+                key={c.concurso}
+                style={styles.resultadoCard}
+              >
+                <View style={styles.resultadoCabecalho}>
+                  <Text style={styles.resultadoConcurso}>
+                    Concurso {c.concurso}
+                  </Text>
+
+                  <Text style={styles.data}>
+                    {c.data}
+                  </Text>
+                </View>
+
+                <View style={styles.grid}>
+                  {c.dezenas.map((d) => (
+                    <Bola key={d} numero={d} />
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* =================================================
+            ANÁLISE
+        ================================================= */}
+
+        {aba === "analise" && (
+          <View>
+            <Text style={styles.tituloPagina}>
+              Mapa de Calor
+            </Text>
+
+            <Text style={styles.subPagina}>
+              Frequência nos últimos{" "}
+              {estatisticas.total} concursos
+            </Text>
+
+            <View style={styles.mapa}>
+              {estatisticas.ranking
+                .sort(
+                  (a, b) =>
+                    Number(a.dezena) -
+                    Number(b.dezena)
+                )
+                .map((item) => {
+                  const pct =
+                    item.percentual;
+
+                  let bg = "#164E63";
+
+                  if (pct >= 65)
+                    bg = "#D84315";
+                  else if (pct >= 58)
+                    bg = "#EF6C00";
+                  else if (pct >= 52)
+                    bg = "#F9A825";
+                  else if (pct < 45)
+                    bg = "#0D47A1";
+
+                  return (
+                    <View
+                      key={item.dezena}
+                      style={[
+                        styles.mapaItem,
+                        {
+                          backgroundColor: bg,
+                        },
+                      ]}
+                    >
+                      <Text style={styles.mapaNumero}>
+                        {item.dezena}
+                      </Text>
+
+                      <Text style={styles.mapaPct}>
+                        {Math.round(pct)}%
+                      </Text>
+
+                      <Text style={styles.mapaFreq}>
+                        {item.freq}x
+                      </Text>
+                    </View>
+                  );
+                })}
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitulo}>
+                LEGENDA
+              </Text>
+
+              <Text style={styles.legenda}>
+                🔴 Quente • 🟠 Morna • 🟡 Neutra
+                • 🔵 Fria
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* =================================================
+            6 IAs
+        ================================================= */}
+
+        {aba === "ia" && ias && (
+          <View>
+            <Text style={styles.tituloPagina}>
+              Central de 6 IAs
+            </Text>
+
+            <Text style={styles.subPagina}>
+              Consenso estatístico dos motores Águia
+            </Text>
+
+            <CardIA
+              titulo="IA FREQUÊNCIA"
+              icon="🧠"
+              descricao="Analisa ocorrência histórica."
+              ranking={ias.frequencia}
+              cor="#FFC107"
+            />
+
+            <CardIA
+              titulo="IA ATRASOS"
+              icon="⏱"
+              descricao="Analisa ausência recente."
+              ranking={ias.atraso}
+              cor="#29B6F6"
+            />
+
+            <CardIA
+              titulo="IA TENDÊNCIA"
+              icon="📈"
+              descricao="Prioriza comportamento recente."
+              ranking={ias.tendencia}
+              cor="#66BB6A"
+            />
+
+            <CardIA
+              titulo="IA EQUILÍBRIO"
+              icon="⚖"
+              descricao="Busca distribuição estatística."
+              ranking={ias.equilibrio}
+              cor="#AB47BC"
+            />
+
+            <CardIA
+              titulo="IA PADRÕES"
+              icon="🔍"
+              descricao="Avalia repetição e padrões recentes."
+              ranking={ias.padroes}
+              cor="#FF7043"
+            />
+
+            <CardIA
+              titulo="IA ÁGUIA — CONSENSO"
+              icon="🦅"
+              descricao="Combina os cinco motores."
+              ranking={ias.consenso}
+              cor="#FFC107"
+            />
+
+            <View style={styles.aviso}>
+              <Text style={styles.avisoTitulo}>
+                IMPORTANTE
+              </Text>
+
+              <Text style={styles.avisoTexto}>
+                As IAs do aplicativo são modelos
+                estatísticos. Elas organizam os dados
+                históricos, mas não conseguem prever
+                com garantia o próximo sorteio.
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* =================================================
+            GERAR
+        ================================================= */}
+
+        {aba === "gerar" && (
+          <View>
+            <Text style={styles.tituloPagina}>
+              Gerador Águia
+            </Text>
+
+            <Text style={styles.subPagina}>
+              Gere um jogo usando o consenso das 6
+              análises.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.btnAmarelo}
+              onPress={criarJogo}
+            >
+              <Text style={styles.btnAmareloTexto}>
+                ✦ GERAR NOVO JOGO
+              </Text>
+            </TouchableOpacity>
+
+            {ias && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitulo}>
+                  TOP 15 — CONSENSO ÁGUIA
+                </Text>
+
+                <View style={styles.grid}>
+                  {ias.consenso
+                    .slice(0, 15)
+                    .map((x) => (
+                      <Bola
+                        key={x.dezena}
+                        numero={x.dezena}
+                        selecionada
+                      />
+                    ))}
+                </View>
+              </View>
+            )}
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitulo}>
+                COMO O JOGO É MONTADO
+              </Text>
+
+              <Text style={styles.explicacao}>
+                • Frequência histórica
+                {"\n"}• Atraso
+                {"\n"}• Tendência recente
+                {"\n"}• Equilíbrio
+                {"\n"}• Padrões
+                {"\n"}• Consenso final
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* =================================================
+            JOGOS
+        ================================================= */}
+
+        {aba === "jogos" && (
+          <View>
+            <Text style={styles.tituloPagina}>
+              Meus Jogos
+            </Text>
+
+            <Text style={styles.subPagina}>
+              Jogos gerados pelo Águia
+            </Text>
+
+            {jogos.length === 0 ? (
+              <View style={styles.vazio}>
+                <Text style={styles.vazioIcon}>
+                  🦅
+                </Text>
+
+                <Text style={styles.vazioTitulo}>
+                  Nenhum jogo ainda
+                </Text>
+
+                <Text style={styles.vazioTexto}>
+                  Gere seu primeiro jogo Águia.
+                </Text>
+
+                <TouchableOpacity
+                  style={styles.btnAmarelo}
+                  onPress={criarJogo}
+                >
+                  <Text style={styles.btnAmareloTexto}>
+                    GERAR JOGO
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              jogos.map((jogo, indice) => (
+                <View
+                  key={jogo.id}
+                  style={styles.card}
+                >
+                  <View style={styles.cardTopo}>
+                    <View>
+                      <Text style={styles.cardTitulo}>
+                        {jogo.nome}
+                      </Text>
+
+                      <Text style={styles.data}>
+                        {jogo.data}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.jogoNumero}>
+                      #{jogos.length - indice}
+                    </Text>
+                  </View>
+
+                  <View style={styles.grid}>
+                    {jogo.dezenas.map((d) => (
+                      <Bola
+                        key={d}
+                        numero={d}
+                        selecionada
+                      />
+                    ))}
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+        )}
+
+        {/* =================================================
+            BACKTEST
+        ================================================= */}
+
+        {aba === "backtest" && (
+          <View>
+            <Text style={styles.tituloPagina}>
+              Backtest Águia
+            </Text>
+
+            <Text style={styles.subPagina}>
+              Teste histórico sem usar o resultado
+              futuro para montar o jogo.
+            </Text>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitulo}>
+                CONFIGURAÇÃO
+              </Text>
+
+              <Text style={styles.explicacao}>
+                Últimos 30 concursos disponíveis para
+                simulação, utilizando o histórico
+                anterior de cada concurso-alvo.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.btnVerde}
+                onPress={rodarBacktest}
+              >
+                <Text style={styles.btnVerdeTexto}>
+                  ▶ RODAR BACKTEST
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {backtest && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitulo}>
+                  RESULTADO
+                </Text>
+
+                <Text style={styles.backNumero}>
+                  {backtest.concursos}
+                </Text>
+
+                <Text style={styles.backLegenda}>
+                  concursos testados
+                </Text>
+
+                <View style={styles.linha}>
+                  <Text style={styles.linhaTexto}>
+                    11 pontos
+                  </Text>
+
+                  <Text style={styles.linhaValor}>
+                    {backtest.acertos[11]}x
+                  </Text>
+                </View>
+
+                <View style={styles.linha}>
+                  <Text style={styles.linhaTexto}>
+                    12 pontos
+                  </Text>
+
+                  <Text style={styles.linhaValor}>
+                    {backtest.acertos[12]}x
+                  </Text>
+                </View>
+
+                <View style={styles.linha}>
+                  <Text style={styles.linhaTexto}>
+                    13 pontos
+                  </Text>
+
+                  <Text style={styles.linhaValor}>
+                    {backtest.acertos[13]}x
+                  </Text>
+                </View>
+
+                <View style={styles.linha}>
+                  <Text style={styles.linhaTexto}>
+                    14 pontos
+                  </Text>
+
+                  <Text style={styles.linhaValor}>
+                    {backtest.acertos[14]}x
+                  </Text>
+                </View>
+
+                <View style={styles.linha}>
+                  <Text style={styles.linhaTexto}>
+                    15 pontos
+                  </Text>
+
+                  <Text style={styles.linhaValor}>
+                    {backtest.acertos[15]}x
+                  </Text>
+                </View>
+
+                <View style={styles.divisor} />
+
+                <Text style={styles.financeiro}>
+                  Custo: R${" "}
+                  {backtest.custo.toFixed(2)}
+                </Text>
+
+                <Text style={styles.financeiroPequeno}>
+                  Aposta simples considerada:
+                  R$ 3,50.
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* =====================================================
+          MENU
+      ===================================================== */}
+
+      <View style={styles.nav}>
+        {NAV.map(([id, icon, texto]) => {
+          const ativo = aba === id;
+
+          return (
+            <TouchableOpacity
+              key={id}
+              style={styles.navItem}
+              onPress={() => setAba(id)}
+            >
+              <Text
+                style={[
+                  styles.navIcon,
+                  ativo && styles.navAtivo,
+                ]}
+              >
+                {icon}
+              </Text>
+
+              <Text
+                style={[
+                  styles.navTexto,
+                  ativo && styles.navAtivo,
+                ]}
+              >
+                {texto}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+/* ============================================================
+   ESTILOS
+============================================================ */
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#080D18",
+  },
+
+  loading: {
+    flex: 1,
+    backgroundColor: "#080D18",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  logoGrande: {
+    color: "#FFC107",
+    fontSize: 42,
+    fontWeight: "900",
+    letterSpacing: 3,
+  },
+
+  pro: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    letterSpacing: 6,
+    marginTop: 4,
+  },
+
+  loadingTexto: {
+    color: "#94A3B8",
+    marginTop: 18,
+  },
+
+  header: {
+    height: 72,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderColor: "#182236",
+    backgroundColor: "#0B1220",
+  },
+
+  logo: {
+    color: "#FFC107",
+    fontSize: 19,
+    fontWeight: "900",
+  },
+
+  logoSub: {
+    color: "#64748B",
+    fontSize: 8,
+    marginTop: 3,
+    letterSpacing: 1,
+  },
+
+  refresh: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "#131D2F",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  refreshTexto: {
+    color: "#FFC107",
+    fontSize: 27,
+  },
+
+  content: {
+    flex: 1,
+    paddingHorizontal: 15,
+    paddingTop: 15,
+  },
+
+  hero: {
+    backgroundColor: "#101A2C",
+    borderRadius: 22,
+    padding: 22,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: "#1E2C45",
+  },
+
+  heroMini: {
+    color: "#FFC107",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+
+  heroTitulo: {
+    color: "#FFFFFF",
+    fontSize: 30,
+    fontWeight: "900",
+    marginTop: 5,
+  },
+
+  heroTexto: {
+    color: "#94A3B8",
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 8,
+    marginBottom: 18,
+  },
+
+  btnAmarelo: {
+    backgroundColor: "#FFC107",
+    paddingVertical: 15,
+    borderRadius: 13,
+    alignItems: "center",
+    marginTop: 10,
+  },
+
+  btnAmareloTexto: {
+    color: "#080D18",
+    fontWeight: "900",
+    fontSize: 14,
+  },
+
+  btnVerde: {
+    backgroundColor: "#16A34A",
+    paddingVertical: 15,
+    borderRadius: 13,
+    alignItems: "center",
+    marginTop: 18,
+  },
+
+  btnVerdeTexto: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+  },
+
+  card: {
+    backgroundColor: "#111B2D",
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#1B2940",
+  },
+
+  cardTopo: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  cardTitulo: {
+    color: "#FFC107",
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+
+  concurso: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "800",
+    marginTop: 5,
+  },
+
+  data: {
+    color: "#64748B",
+    fontSize: 11,
+    marginTop: 3,
+  },
+
+  fonteBadge: {
+    borderWidth: 1,
+    borderColor: "#22C55E",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+
+  fonteTexto: {
+    color: "#22C55E",
+    fontSize: 9,
+    fontWeight: "900",
+  },
+
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+    marginTop: 15,
+  },
+
+  bola: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#17243A",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#2A3A55",
+  },
+
+  bolaSelecionada: {
+    backgroundColor: "#D97706",
+    borderColor: "#FFC107",
+  },
+
+  bolaTexto: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 12,
+  },
+
+  dupla: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 14,
+  },
+
+  statCard: {
+    flex: 1,
+    backgroundColor: "#111B2D",
+    borderRadius: 18,
+    paddingVertical: 18,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#1B2940",
+  },
+
+  statNumero: {
+    color: "#FFFFFF",
+    fontSize: 27,
+    fontWeight: "900",
+  },
+
+  statTexto: {
+    color: "#64748B",
+    fontSize: 9,
+    marginTop: 3,
+    fontWeight: "800",
+  },
+
+  statusLinha: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+  },
+
+  statusBolinha: {
+    color: "#22C55E",
+    marginRight: 8,
+  },
+
+  statusTexto: {
+    color: "#CBD5E1",
+    fontSize: 12,
+  },
+
+  tituloPagina: {
+    color: "#FFFFFF",
+    fontSize: 25,
+    fontWeight: "900",
+  },
+
+  subPagina: {
+    color: "#64748B",
+    fontSize: 12,
+    marginTop: 5,
+    marginBottom: 16,
+  },
+
+  resultadoCard: {
+    backgroundColor: "#111B2D",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#1B2940",
+  },
+
+  resultadoCabecalho: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  resultadoConcurso: {
+    color: "#FFC107",
+    fontWeight: "900",
+  },
+
+  mapa: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    justifyContent: "space-between",
+  },
+
+  mapaItem: {
+    width: "18%",
+    aspectRatio: 0.85,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  mapaNumero: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "900",
+  },
+
+  mapaPct: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    marginTop: 3,
+  },
+
+  mapaFreq: {
+    color: "#FFFFFF",
+    opacity: 0.7,
+    fontSize: 8,
+  },
+
+  legenda: {
+    color: "#CBD5E1",
+    fontSize: 12,
+    marginTop: 8,
+  },
+
+  cardIA: {
+    backgroundColor: "#111B2D",
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#1B2940",
+  },
+
+  iaHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  iaTitulo: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+
+  iaDescricao: {
+    color: "#64748B",
+    fontSize: 10,
+    marginTop: 3,
+  },
+
+  scoreBadge: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  scoreText: {
+    fontWeight: "900",
+    fontSize: 14,
+  },
+
+  iaNumeros: {
+    flexDirection: "row",
+    marginTop: 14,
+    gap: 7,
+  },
+
+  iaNumero: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#1B2940",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  iaNumeroTexto: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 11,
+  },
+
+  aviso: {
+    backgroundColor: "#211B0B",
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#5D4707",
+  },
+
+  avisoTitulo: {
+    color: "#FFC107",
+    fontWeight: "900",
+    fontSize: 11,
+  },
+
+  avisoTexto: {
+    color: "#B7A978",
+    fontSize: 11,
+    lineHeight: 17,
+    marginTop: 6,
+  },
+
+  explicacao: {
+    color: "#94A3B8",
+    fontSize: 12,
+    lineHeight: 20,
+    marginTop: 10,
+  },
+
+  vazio: {
+    alignItems: "center",
+    backgroundColor: "#111B2D",
+    borderRadius: 20,
+    padding: 30,
+  },
+
+  vazioIcon: {
+    fontSize: 45,
+  },
+
+  vazioTitulo: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 18,
+    marginTop: 10,
+  },
+
+  vazioTexto: {
+    color: "#64748B",
+    marginTop: 5,
+  },
+
+  jogoNumero: {
+    color: "#FFC107",
+    fontWeight: "900",
+  },
+
+  backNumero: {
+    color: "#FFFFFF",
+    fontSize: 40,
+    fontWeight: "900",
+    marginTop: 15,
+  },
+
+  backLegenda: {
+    color: "#64748B",
+    fontSize: 11,
+    marginBottom: 10,
+  },
+
+  linha: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: "#1B2940",
+  },
+
+  linhaTexto: {
+    color: "#CBD5E1",
+  },
+
+  linhaValor: {
+    color: "#FFC107",
+    fontWeight: "900",
+  },
+
+  divisor: {
+    height: 1,
+    backgroundColor: "#243149",
+    marginVertical: 14,
+  },
+
+  financeiro: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 15,
+  },
+
+  financeiroPequeno: {
+    color: "#64748B",
+    fontSize: 10,
+    marginTop: 5,
+  },
+
+  alerta: {
+    backgroundColor: "#281414",
+    borderColor: "#7F1D1D",
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+  },
+
+  alertaTitulo: {
+    color: "#FF7676",
+    fontWeight: "900",
+  },
+
+  alertaTexto: {
+    color: "#BCA0A0",
+    fontSize: 11,
+    marginTop: 5,
+  },
+
+  nav: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 76,
+    backgroundColor: "#0D1626",
+    borderTopWidth: 1,
+    borderTopColor: "#1B2940",
+    flexDirection: "row",
+    paddingHorizontal: 3,
+    paddingTop: 7,
+  },
+
+  navItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+
+  navIcon: {
+    color: "#64748B",
+    fontSize: 19,
+    fontWeight: "900",
+  },
+
+  navTexto: {
+    color: "#64748B",
+    fontSize: 8,
+    fontWeight: "800",
+    marginTop: 4,
+  },
+
+  navAtivo: {
+    color: "#FFC107",
+  },
+});
