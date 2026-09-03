@@ -6,11 +6,39 @@
   <title>ÁGUIA APP PRO Lotofácil</title>
   <style>
     body { font-family: sans-serif; background: #121212; color: #fff; margin: 0; padding: 20px; text-align: center; }
-    h1 { color: #00e676; }
+    h1 { color: #00e676; font-size: 22px; }
+    .btn { background: #00e676; color: #000; font-weight: bold; padding: 15px 25px; border: none; border-radius: 8px; font-size: 16px; margin-top: 15px; cursor: pointer; }
+    .ball { display: inline-block; width: 35px; height: 35px; line-height: 35px; background: #252525; color: #00e676; border: 1px solid #00e676; border-radius: 50%; margin: 3px; font-weight: bold; }
+    #resultado { margin-top: 20px; text-align: left; background: #1e1e1e; padding: 15px; border-radius: 8px; }
+    .jogo { margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 8px; }
   </style>
 </head>
 <body>
   <h1>ÁGUIA APP PRO Lotofácil</h1>
-  <p>Aplicativo ativado com sucesso!</p>
+  <p>Gerador Estocástico de Jogos</p>
+  <button class="btn" onclick="gerarJogos()">GERAR 3 JOGOS</button>
+  <div id="resultado"></div>
+
+  <script>
+    function gerarJogos() {
+      const container = document.getElementById('resultado');
+      container.innerHTML = '';
+      for (let j = 1; j <= 3; j++) {
+        let numeros = [];
+        while (numeros.length < 15) {
+          let n = Math.floor(Math.random() * 25) + 1;
+          if (!numeros.includes(n)) numeros.push(n);
+        }
+        numeros.sort((a, b) => a - b);
+        let html = `<div class="jogo"><strong>Jogo ${j}:</strong><br>`;
+        numeros.forEach(num => {
+          let numFormatado = num < 10 ? '0' + num : num;
+          html += `<span class="ball">${numFormatado}</span>`;
+        });
+        html += `</div>`;
+        container.innerHTML += html;
+      }
+    }
+  </script>
 </body>
 </html>
