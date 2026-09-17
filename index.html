@@ -1,220 +1,1998 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ÁGUIA APP PRO Lotofácil</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #121212; color: #ffffff; padding: 15px; padding-bottom: 80px; }
-    h1 { color: #00e676; font-size: 20px; text-align: center; margin-bottom: 5px; }
-    p.subtitle { color: #aaa; font-size: 12px; text-align: center; margin-bottom: 15px; }
-    
-    /* Navigation Bar */
-    .navbar { position: fixed; bottom: 0; left: 0; right: 0; background: #1e1e1e; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #333; z-index: 1000; }
-    .nav-item { color: #888; text-decoration: none; font-size: 11px; text-align: center; cursor: pointer; flex: 1; }
-    .nav-item.active { color: #00e676; font-weight: bold; }
-    .nav-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lotofácil Statistical Lab</title>
 
-    /* Sections */
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+<style>
+*{box-sizing:border-box}
 
-    /* Cards & Containers */
-    .card { background: #1e1e1e; border-radius: 10px; padding: 15px; margin-bottom: 15px; border: 1px solid #2a2a2a; }
-    .card-title { color: #00e676; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
+body{
+    margin:0;
+    font-family:Arial,Helvetica,sans-serif;
+    background:#0b1020;
+    color:#e9edf7;
+}
 
-    /* Controls & Buttons */
-    .btn { background: #00e676; color: #000; font-weight: bold; padding: 12px; border: none; border-radius: 8px; width: 100%; font-size: 14px; cursor: pointer; margin-top: 10px; }
-    .btn:active { opacity: 0.8; }
-    
-    /* Ball Numbers */
-    .ball { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: #2a2a2a; color: #00e676; border: 1px solid #00e676; border-radius: 50%; margin: 3px; font-weight: bold; font-size: 13px; }
-    .ball.selected { background: #00e676; color: #121212; }
+header{
+    padding:25px;
+    background:#111936;
+    border-bottom:1px solid #29345e;
+}
 
-    /* Results List */
-    .jogo-box { background: #161616; padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #00e676; }
-    .jogo-header { font-size: 12px; color: #aaa; margin-bottom: 5px; }
+h1{margin:0 0 8px;font-size:26px}
+h2{font-size:19px;margin-top:0}
+h3{font-size:16px}
 
-    /* Status Message */
-    #status { font-size: 12px; color: #ffb74d; text-align: center; margin-bottom: 10px; min-height: 16px; }
-  </style>
+.container{
+    max-width:1400px;
+    margin:auto;
+    padding:20px;
+}
+
+.panel{
+    background:#121a31;
+    border:1px solid #29345e;
+    border-radius:12px;
+    padding:18px;
+    margin-bottom:18px;
+}
+
+button{
+    border:0;
+    border-radius:8px;
+    padding:11px 16px;
+    margin:4px;
+    cursor:pointer;
+    background:#315efb;
+    color:white;
+    font-weight:bold;
+}
+
+button:hover{opacity:.88}
+
+input,select,textarea{
+    background:#0b1020;
+    color:white;
+    border:1px solid #39456e;
+    border-radius:7px;
+    padding:10px;
+}
+
+textarea{
+    width:100%;
+    min-height:130px;
+    font-family:monospace;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    gap:12px;
+}
+
+.card{
+    background:#0c1327;
+    border:1px solid #29345e;
+    padding:15px;
+    border-radius:10px;
+}
+
+.value{
+    font-size:25px;
+    font-weight:bold;
+    margin-top:5px;
+}
+
+.good{color:#45d483}
+.warn{color:#ffc857}
+.bad{color:#ff6577}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:12px;
+}
+
+th,td{
+    padding:8px;
+    border-bottom:1px solid #29345e;
+    text-align:center;
+}
+
+th{
+    background:#192343;
+}
+
+canvas{
+    width:100%;
+    max-height:400px;
+    background:#0b1020;
+    border-radius:8px;
+}
+
+.progress{
+    height:12px;
+    background:#202b4d;
+    border-radius:8px;
+    overflow:hidden;
+}
+
+.progress div{
+    height:100%;
+    width:0%;
+    background:#315efb;
+}
+
+.small{
+    color:#9ca8c7;
+    font-size:13px;
+}
+
+#log{
+    background:#070b16;
+    padding:12px;
+    border-radius:8px;
+    white-space:pre-wrap;
+    font-family:monospace;
+    max-height:350px;
+    overflow:auto;
+}
+
+.number{
+    display:inline-block;
+    min-width:32px;
+    padding:6px;
+    margin:3px;
+    border-radius:6px;
+    text-align:center;
+    background:#26345f;
+    font-weight:bold;
+}
+
+.highlight{
+    background:#315efb;
+}
+
+.warningBox{
+    border-left:4px solid #ffc857;
+    padding:12px;
+    background:#191a27;
+    margin-top:10px;
+}
+
+.successBox{
+    border-left:4px solid #45d483;
+    padding:12px;
+    background:#111f1b;
+    margin-top:10px;
+}
+
+.dangerBox{
+    border-left:4px solid #ff6577;
+    padding:12px;
+    background:#211319;
+    margin-top:10px;
+}
+
+@media(max-width:700px){
+    .container{padding:10px}
+}
+</style>
 </head>
+
 <body>
 
-  <h1>ÁGUIA APP PRO</h1>
-  <p class="subtitle">Análise estatística com 6 motores estocásticos</p>
-  <div id="status">Carregando dados...</div>
-
-  <!-- ABA: INÍCIO / GERADOR -->
-  <div id="tab-inicio" class="tab-content active">
-    <div class="card">
-      <div class="card-title">Gerador Estocástico</div>
-      <p style="font-size: 13px; color: #ccc; margin-bottom: 10px;">Gere jogos otimizados com base nos algoritmos avançados e padrão de frequências.</p>
-      <button class="btn" onclick="gerarEstatistico(3)">GERAR 3 JOGOS PRO</button>
-      <button class="btn" style="background:#29b6f6; margin-top:8px;" onclick="gerarEstatistico(5)">GERAR 5 JOGOS PRO</button>
+<header>
+    <h1>Lotofácil Statistical Lab</h1>
+    <div class="small">
+        Laboratório estatístico para análise de aleatoriedade, anomalias,
+        simulação Monte Carlo e backtest.
     </div>
-    <div id="jogos-gerados"></div>
-  </div>
+</header>
 
-  <!-- ABA: RESULTADO -->
-  <div id="tab-resultado" class="tab-content">
-    <div class="card">
-      <div class="card-title">Último Sorteio Caixa</div>
-      <div id="ultimo-sorteio-info">Buscando dados da Lotofácil...</div>
-    </div>
-  </div>
+<div class="container">
 
-  <!-- ABA: ANÁLISE -->
-  <div id="tab-analise" class="tab-content">
-    <div class="card">
-      <div class="card-title">Análise de Frequência</div>
-      <p style="font-size: 12px; color: #aaa;">Dezenas mais quentes e frequentes nos últimos concursos:</p>
-      <div id="frequencia-balls" style="margin-top: 10px;"></div>
-    </div>
-  </div>
+<!-- IMPORTAÇÃO -->
+<div class="panel">
+<h2>1. Importar histórico</h2>
 
-  <!-- ABA: 6 IAs -->
-  <div id="tab-ia" class="tab-content">
-    <div class="card">
-      <div class="card-title">Motores Inteligentes (6 IAs)</div>
-      <p style="font-size: 12px; color: #aaa; margin-bottom: 10px;">Combine predições dos 6 motores probabilísticos simultaneamente.</p>
-      <button class="btn" style="background:#ab47bc; color:#fff;" onclick="executarMotoresIA()">PROCESSAR MOTORES DE IA</button>
-    </div>
-    <div id="ia-resultados"></div>
-  </div>
+<p class="small">
+Formato recomendado: uma linha por concurso contendo as 15 dezenas.
+O programa aceita CSV separado por vírgula, ponto e vírgula ou espaço.
+</p>
 
-  <!-- BARRA DE NAVEGAÇÃO INFERIOR -->
-  <nav class="navbar">
-    <div class="nav-item active" onclick="switchTab('inicio', this)">
-      <span class="nav-icon">⌂</span>Início
-    </div>
-    <div class="nav-item" onclick="switchTab('resultado', this)">
-      <span class="nav-icon">●</span>Resultado
-    </div>
-    <div class="nav-item" onclick="switchTab('analise', this)">
-      <span class="nav-icon">▦</span>Análise
-    </div>
-    <div class="nav-item" onclick="switchTab('ia', this)">
-      <span class="nav-icon">✦</span>6 IAs
-    </div>
-  </nav>
+<input type="file" id="fileInput" accept=".csv,.txt">
 
-  <script>
-    const API = "https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil";
-    const ESPELHO = "https://loteriascaixa-api.herokuapp.com/api/lotofacil";
+<br><br>
 
-    let ultimosResultados = [];
+<textarea id="dataInput"
+placeholder="Exemplo:
 
-    // Alternar abas
-    function switchTab(tabId, el) {
-      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-      document.getElementById('tab-' + tabId).classList.add('active');
-      el.classList.add('active');
+01,02,03,05,06,07,09,10,11,14,17,18,20,22,25
+02,03,04,06,07,08,10,11,13,15,16,18,20,21,24
+..."></textarea>
+
+<br>
+
+<button onclick="loadData()">Carregar dados</button>
+<button onclick="useDemo()">Carregar exemplo</button>
+<button onclick="clearData()">Limpar</button>
+
+<div id="dataStatus"></div>
+</div>
+
+<!-- CONFIGURAÇÕES -->
+<div class="panel">
+
+<h2>2. Configurações da análise</h2>
+
+<div class="grid">
+
+<div>
+<label>Simulações Monte Carlo</label><br>
+<select id="simulations">
+<option value="1000">1.000</option>
+<option value="5000">5.000</option>
+<option value="10000" selected>10.000</option>
+<option value="50000">50.000</option>
+<option value="100000">100.000</option>
+</select>
+</div>
+
+<div>
+<label>Janela recente</label><br>
+<select id="window">
+<option value="10">10</option>
+<option value="20">20</option>
+<option value="50" selected>50</option>
+<option value="100">100</option>
+<option value="200">200</option>
+</select>
+</div>
+
+<div>
+<label>Jogos no backtest</label><br>
+<select id="games">
+<option value="5">5</option>
+<option value="10" selected>10</option>
+<option value="20">20</option>
+<option value="50">50</option>
+</select>
+</div>
+
+</div>
+
+<br>
+
+<button onclick="runFullAnalysis()">Executar análise completa</button>
+
+</div>
+
+<!-- PROGRESSO -->
+<div class="panel">
+<h2>Progresso</h2>
+
+<div class="progress">
+<div id="progressBar"></div>
+</div>
+
+<p id="progressText" class="small">Aguardando dados.</p>
+
+</div>
+
+<!-- RESUMO -->
+<div class="panel">
+
+<h2>3. Resumo</h2>
+
+<div class="grid">
+
+<div class="card">
+Concursos
+<div class="value" id="totalDraws">0</div>
+</div>
+
+<div class="card">
+Média da soma
+<div class="value" id="avgSum">-</div>
+</div>
+
+<div class="card">
+Média repetição
+<div class="value" id="avgRepeat">-</div>
+</div>
+
+<div class="card">
+Ímpares médios
+<div class="value" id="avgOdd">-</div>
+</div>
+
+<div class="card">
+Maior atraso
+<div class="value" id="maxDelay">-</div>
+</div>
+
+<div class="card">
+Índice de anomalia
+<div class="value" id="anomalyScore">-</div>
+</div>
+
+</div>
+
+<div id="interpretation"></div>
+
+</div>
+
+<!-- FREQUÊNCIA -->
+<div class="panel">
+
+<h2>4. Frequência das 25 dezenas</h2>
+
+<div id="frequencyTable"></div>
+
+</div>
+
+<!-- GRÁFICO FREQUÊNCIA -->
+<div class="panel">
+
+<h2>5. Frequência por dezena</h2>
+
+<canvas id="frequencyChart" width="1200" height="400"></canvas>
+
+</div>
+
+<!-- ATRASO -->
+<div class="panel">
+
+<h2>6. Atraso atual</h2>
+
+<div id="delayTable"></div>
+
+</div>
+
+<!-- REPETIÇÃO -->
+<div class="panel">
+
+<h2>7. Repetição entre concursos</h2>
+
+<div id="repeatTable"></div>
+
+<canvas id="repeatChart" width="1200" height="400"></canvas>
+
+</div>
+
+<!-- SOMA -->
+<div class="panel">
+
+<h2>8. Distribuição das somas</h2>
+
+<div id="sumStats"></div>
+
+<canvas id="sumChart" width="1200" height="400"></canvas>
+
+</div>
+
+<!-- PARIDADE -->
+<div class="panel">
+
+<h2>9. Distribuição pares / ímpares</h2>
+
+<div id="parityTable"></div>
+
+</div>
+
+<!-- SEQUÊNCIAS -->
+<div class="panel">
+
+<h2>10. Sequências consecutivas</h2>
+
+<div id="sequenceTable"></div>
+
+</div>
+
+<!-- CORRELAÇÃO -->
+<div class="panel">
+
+<h2>11. Coocorrência entre dezenas</h2>
+
+<p class="small">
+Quanto maior o valor, mais vezes as duas dezenas apareceram juntas.
+Isso é descrição histórica, não prova de causalidade.
+</p>
+
+<div id="correlationTable"></div>
+
+</div>
+
+<!-- MONTE CARLO -->
+<div class="panel">
+
+<h2>12. Monte Carlo — sorteio aleatório vs histórico</h2>
+
+<p>
+Esta é uma das partes principais do laboratório.
+O programa gera milhares de sorteios perfeitamente aleatórios e compara
+suas propriedades com o histórico informado.
+</p>
+
+<button onclick="runMonteCarlo()">Executar Monte Carlo</button>
+
+<div id="monteResult"></div>
+
+</div>
+
+<!-- ACERTOS -->
+<div class="panel">
+
+<h2>13. Distribuição de acertos</h2>
+
+<p class="small">
+Aqui o aplicativo testa a ideia de “ficar perto”.
+A distribuição real é comparada com uma distribuição obtida por simulações.
+</p>
+
+<div id="hitResult"></div>
+
+<canvas id="hitChart" width="1200" height="400"></canvas>
+
+</div>
+
+<!-- AUTOCORRELAÇÃO -->
+<div class="panel">
+
+<h2>14. Autocorrelação</h2>
+
+<p class="small">
+Procura dependência entre concursos separados por diferentes distâncias.
+Um resultado diferente de zero não significa automaticamente manipulação.
+</p>
+
+<div id="autocorrelation"></div>
+
+</div>
+
+<!-- BACKTEST -->
+<div class="panel">
+
+<h2>15. Backtest</h2>
+
+<p>
+O modelo tenta selecionar dezenas utilizando somente informações disponíveis
+antes de cada concurso e depois compara o resultado real.
+</p>
+
+<button onclick="runBacktest()">Executar backtest</button>
+
+<div id="backtestResult"></div>
+
+</div>
+
+<!-- MODELO -->
+<div class="panel">
+
+<h2>16. Ranking atual das dezenas</h2>
+
+<p class="small">
+Pontuação experimental combinando frequência, recência, atraso,
+coocorrência e estabilidade. Não representa probabilidade matemática real.
+</p>
+
+<div id="ranking"></div>
+
+</div>
+
+<!-- JOGOS -->
+<div class="panel">
+
+<h2>17. Jogos experimentais</h2>
+
+<button onclick="generateGames()">Gerar jogos</button>
+
+<div id="gamesOutput"></div>
+
+</div>
+
+<!-- EXPORT -->
+<div class="panel">
+
+<h2>18. Exportação</h2>
+
+<button onclick="exportJSON()">Exportar análise JSON</button>
+<button onclick="exportCSV()">Exportar ranking CSV</button>
+
+</div>
+
+<!-- LOG -->
+<div class="panel">
+
+<h2>19. Log científico</h2>
+
+<div id="log"></div>
+
+</div>
+
+</div>
+
+<script>
+
+/* ============================================================
+   ESTADO
+============================================================ */
+
+let draws=[];
+let analysis={};
+
+/* ============================================================
+   UTILIDADES
+============================================================ */
+
+function log(msg){
+    const el=document.getElementById("log");
+    el.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+    el.scrollTop=el.scrollHeight;
+}
+
+function progress(p,text){
+    document.getElementById("progressBar").style.width=p+"%";
+    document.getElementById("progressText").textContent=text;
+}
+
+function mean(arr){
+    if(!arr.length)return 0;
+    return arr.reduce((a,b)=>a+b,0)/arr.length;
+}
+
+function median(arr){
+    if(!arr.length)return 0;
+    const a=[...arr].sort((x,y)=>x-y);
+    const m=Math.floor(a.length/2);
+    return a.length%2?a[m]:(a[m-1]+a[m])/2;
+}
+
+function std(arr){
+    if(arr.length<2)return 0;
+    const m=mean(arr);
+    return Math.sqrt(mean(arr.map(x=>(x-m)**2)));
+}
+
+function clamp(x,a,b){
+    return Math.max(a,Math.min(b,x));
+}
+
+function shuffle(array){
+    const a=[...array];
+    for(let i=a.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [a[i],a[j]]=[a[j],a[i]];
     }
+    return a;
+}
 
-    // Buscar resultados da API
-    async function carregarDados() {
-      const status = document.getElementById('status');
-      try {
-        let res = await fetch(ESPELHO);
-        let data = await res.json();
-        
-        let dezenas = [];
-        let concurso = "";
-        
-        if (Array.isArray(data) && data.length > 0) {
-          dezenas = data[0].dezenas || data[0].listaDezenas;
-          concurso = data[0].concurso;
-        } else if (data.dezenas || data.listaDezenas) {
-          dezenas = data.dezenas || data.listaDezenas;
-          concurso = data.concurso;
+function randomDraw(){
+    return shuffle(
+        Array.from({length:25},(_,i)=>i+1)
+    ).slice(0,15).sort((a,b)=>a-b);
+}
+
+function combination(arr){
+    return [...arr].sort((a,b)=>a-b).join("-");
+}
+
+function overlap(a,b){
+    const s=new Set(a);
+    return b.filter(x=>s.has(x)).length;
+}
+
+/* ============================================================
+   IMPORTAÇÃO
+============================================================ */
+
+document.getElementById("fileInput").addEventListener("change",function(e){
+
+    const file=e.target.files[0];
+
+    if(!file)return;
+
+    const reader=new FileReader();
+
+    reader.onload=function(){
+
+        document.getElementById("dataInput").value=reader.result;
+
+        loadData();
+
+    };
+
+    reader.readAsText(file);
+
+});
+
+function parseData(text){
+
+    const lines=text
+        .split(/\r?\n/)
+        .map(x=>x.trim())
+        .filter(Boolean);
+
+    const result=[];
+
+    for(const line of lines){
+
+        const nums=line
+            .split(/[;,\s]+/)
+            .map(x=>parseInt(x.replace(/\D/g,""),10))
+            .filter(x=>Number.isInteger(x)&&x>=1&&x<=25);
+
+        const unique=[...new Set(nums)];
+
+        if(unique.length>=15){
+
+            result.push(
+                unique.slice(0,15).sort((a,b)=>a-b)
+            );
+
         }
 
-        if (dezenas && dezenas.length > 0) {
-          status.innerText = "Dados atualizados com sucesso!";
-          exibirUltimoSorteio(concurso, dezenas);
-          renderFrequencias(dezenas);
-        } else {
-          status.innerText = "Modo Offline / Estatística Padrão";
+    }
+
+    return result;
+}
+
+function loadData(){
+
+    const text=document.getElementById("dataInput").value;
+
+    draws=parseData(text);
+
+    document.getElementById("dataStatus").innerHTML=
+        `<div class="successBox">
+        ${draws.length} concursos carregados.
+        </div>`;
+
+    log(`Dados carregados: ${draws.length} concursos.`);
+
+}
+
+function useDemo(){
+
+    const rows=[];
+
+    for(let i=0;i<300;i++){
+
+        rows.push(randomDraw().map(n=>String(n).padStart(2,"0")).join(","));
+
+    }
+
+    document.getElementById("dataInput").value=rows.join("\n");
+
+    loadData();
+
+    log("Dados DEMO carregados. Substitua pelo histórico real.");
+
+}
+
+function clearData(){
+
+    draws=[];
+    analysis={};
+
+    document.getElementById("dataInput").value="";
+    document.getElementById("dataStatus").innerHTML="";
+
+    log("Dados apagados.");
+
+}
+
+/* ============================================================
+   FREQUÊNCIA
+============================================================ */
+
+function frequency(drawsSubset){
+
+    const f=Array(26).fill(0);
+
+    for(const draw of drawsSubset){
+
+        for(const n of draw){
+
+            f[n]++;
+
         }
-      } catch (e) {
-        status.innerText = "Modo Estocástico Conectado (Offline API)";
-      }
+
     }
 
-    function exibirUltimoSorteio(concurso, dezenas) {
-      const container = document.getElementById('ultimo-sorteio-info');
-      let html = `<p style="margin-bottom:8px; font-weight:bold;">Concurso: ${concurso || 'Mais Recente'}</p>`;
-      dezenas.forEach(d => {
-        html += `<span class="ball">${d}</span>`;
-      });
-      container.innerHTML = html;
+    return f;
+
+}
+
+function calculateFrequency(){
+
+    const f=frequency(draws);
+
+    const recent=frequency(
+        draws.slice(-Number(document.getElementById("window").value))
+    );
+
+    analysis.frequency=f;
+    analysis.recentFrequency=recent;
+
+    let html="<table><tr><th>Dezena</th><th>Total</th><th>%</th><th>Recentes</th></tr>";
+
+    for(let n=1;n<=25;n++){
+
+        html+=`
+        <tr>
+        <td>${String(n).padStart(2,"0")}</td>
+        <td>${f[n]}</td>
+        <td>${(f[n]/draws.length*100).toFixed(2)}%</td>
+        <td>${recent[n]}</td>
+        </tr>`;
+
     }
 
-    function renderFrequencias(dezenas) {
-      const container = document.getElementById('frequencia-balls');
-      let html = '';
-      dezenas.forEach(d => {
-        html += `<span class="ball selected">${d}</span>`;
-      });
-      container.innerHTML = html;
-    }
+    html+="</table>";
 
-    // Gerador Pro
-    function gerarEstatistico(qtd) {
-      const container = document.getElementById('jogos-gerados');
-      container.innerHTML = '';
-      for (let i = 1; i <= qtd; i++) {
-        let nums = [];
-        while (nums.length < 15) {
-          let n = Math.floor(Math.random() * 25) + 1;
-          let formatted = n < 10 ? '0' + n : '' + n;
-          if (!nums.includes(formatted)) nums.push(formatted);
+    document.getElementById("frequencyTable").innerHTML=html;
+
+    drawBarChart(
+        "frequencyChart",
+        f.slice(1),
+        Array.from({length:25},(_,i)=>String(i+1))
+    );
+
+}
+
+/* ============================================================
+   ATRASOS
+============================================================ */
+
+function calculateDelays(){
+
+    const delays=[];
+
+    for(let n=1;n<=25;n++){
+
+        let delay=0;
+
+        for(let i=draws.length-1;i>=0;i--){
+
+            if(draws[i].includes(n))break;
+
+            delay++;
+
         }
-        nums.sort((a, b) => parseInt(a) - parseInt(b));
 
-        let card = document.createElement('div');
-        card.className = 'jogo-box';
-        let ballsHtml = nums.map(n => `<span class="ball">${n}</span>`).join('');
-        card.innerHTML = `<div class="jogo-header">Jogo PRO #${i} - Padrão Equilibrado</div>${ballsHtml}`;
-        container.appendChild(card);
-      }
+        delays[n]=delay;
+
     }
 
-    // 6 Motores de IA
-    function executarMotoresIA() {
-      const container = document.getElementById('ia-resultados');
-      container.innerHTML = '';
-      const motores = [
-        "Motor 1: Redes Neurais Estocásticas",
-        "Motor 2: Ciclo de Dezenas Atrasadas",
-        "Motor 3: Matriz de Frequência Par/Ímpar",
-        "Motor 4: Algoritmo Genético de Cobertura",
-        "Motor 5: Filtro de Fechamento Amostragem",
-        "Motor 6: Análise Vetorial das Diagonais"
-      ];
+    analysis.delays=delays;
 
-      motores.forEach((nome, idx) => {
-        let nums = [];
-        while (nums.length < 15) {
-          let n = Math.floor(Math.random() * 25) + 1;
-          let formatted = n < 10 ? '0' + n : '' + n;
-          if (!nums.includes(formatted)) nums.push(formatted);
+    const sorted=Array.from({length:25},(_,i)=>i+1)
+        .sort((a,b)=>delays[b]-delays[a]);
+
+    let html="<table><tr><th>Dezena</th><th>Atraso</th></tr>";
+
+    for(const n of sorted){
+
+        html+=`
+        <tr>
+        <td>${String(n).padStart(2,"0")}</td>
+        <td>${delays[n]}</td>
+        </tr>`;
+
+    }
+
+    html+="</table>";
+
+    document.getElementById("delayTable").innerHTML=html;
+
+    document.getElementById("maxDelay").textContent=
+        Math.max(...delays.slice(1));
+
+}
+
+/* ============================================================
+   REPETIÇÃO
+============================================================ */
+
+function calculateRepeat(){
+
+    const repeats=[];
+
+    for(let i=1;i<draws.length;i++){
+
+        repeats.push(overlap(draws[i-1],draws[i]));
+
+    }
+
+    analysis.repeats=repeats;
+
+    const counts={};
+
+    repeats.forEach(x=>{
+        counts[x]=(counts[x]||0)+1;
+    });
+
+    let html="<table><tr><th>Repetidas</th><th>Ocorrências</th><th>%</th></tr>";
+
+    Object.keys(counts)
+        .sort((a,b)=>a-b)
+        .forEach(k=>{
+
+            html+=`
+            <tr>
+            <td>${k}</td>
+            <td>${counts[k]}</td>
+            <td>${(counts[k]/repeats.length*100).toFixed(2)}%</td>
+            </tr>`;
+
+        });
+
+    html+="</table>";
+
+    document.getElementById("repeatTable").innerHTML=html;
+
+    drawBarChart(
+        "repeatChart",
+        Object.keys(counts).sort((a,b)=>a-b).map(k=>counts[k]),
+        Object.keys(counts).sort((a,b)=>a-b)
+    );
+
+    document.getElementById("avgRepeat").textContent=
+        mean(repeats).toFixed(2);
+
+}
+
+/* ============================================================
+   SOMA
+============================================================ */
+
+function calculateSums(){
+
+    const sums=draws.map(d=>d.reduce((a,b)=>a+b,0));
+
+    analysis.sums=sums;
+
+    const mn=Math.min(...sums);
+    const mx=Math.max(...sums);
+
+    const bins={};
+
+    for(let s=mn;s<=mx;s+=10){
+
+        bins[`${s}-${s+9}`]=0;
+
+    }
+
+    sums.forEach(s=>{
+
+        const base=Math.floor(s/10)*10;
+
+        const key=`${base}-${base+9}`;
+
+        if(bins[key]!==undefined)bins[key]++;
+
+    });
+
+    document.getElementById("sumStats").innerHTML=`
+    <div class="grid">
+    <div class="card">Mínima<div class="value">${mn}</div></div>
+    <div class="card">Máxima<div class="value">${mx}</div></div>
+    <div class="card">Média<div class="value">${mean(sums).toFixed(2)}</div></div>
+    <div class="card">Mediana<div class="value">${median(sums)}</div></div>
+    <div class="card">Desvio<div class="value">${std(sums).toFixed(2)}</div></div>
+    </div>
+    `;
+
+    drawBarChart(
+        "sumChart",
+        Object.values(bins),
+        Object.keys(bins)
+    );
+
+    document.getElementById("avgSum").textContent=
+        mean(sums).toFixed(1);
+
+}
+
+/* ============================================================
+   PARIDADE
+============================================================ */
+
+function calculateParity(){
+
+    const counts={};
+
+    draws.forEach(d=>{
+
+        const odd=d.filter(n=>n%2).length;
+
+        counts[odd]=(counts[odd]||0)+1;
+
+    });
+
+    analysis.parity=counts;
+
+    let html="<table><tr><th>Ímpares</th><th>Pares</th><th>Concursos</th><th>%</th></tr>";
+
+    Object.keys(counts)
+        .sort((a,b)=>a-b)
+        .forEach(odd=>{
+
+            html+=`
+            <tr>
+            <td>${odd}</td>
+            <td>${15-odd}</td>
+            <td>${counts[odd]}</td>
+            <td>${(counts[odd]/draws.length*100).toFixed(2)}%</td>
+            </tr>`;
+
+        });
+
+    html+="</table>";
+
+    document.getElementById("parityTable").innerHTML=html;
+
+    const avgOdd=draws.map(d=>d.filter(n=>n%2).length);
+
+    document.getElementById("avgOdd").textContent=
+        mean(avgOdd).toFixed(2);
+
+}
+
+/* ============================================================
+   SEQUÊNCIAS
+============================================================ */
+
+function consecutiveCount(draw){
+
+    let count=0;
+
+    for(let i=1;i<draw.length;i++){
+
+        if(draw[i]===draw[i-1]+1){
+
+            count++;
+
         }
-        nums.sort((a, b) => parseInt(a) - parseInt(b));
 
-        let card = document.createElement('div');
-        card.className = 'jogo-box';
-        let ballsHtml = nums.map(n => `<span class="ball">${n}</span>`).join('');
-        card.innerHTML = `<div class="jogo-header">${nome}</div>${ballsHtml}`;
-        container.appendChild(card);
-      });
     }
 
-    // Iniciar
-    window.onload = carregarDados;
-  </script>
+    return count;
+
+}
+
+function calculateSequences(){
+
+    const counts={};
+
+    draws.forEach(d=>{
+
+        const c=consecutiveCount(d);
+
+        counts[c]=(counts[c]||0)+1;
+
+    });
+
+    let html="<table><tr><th>Pares consecutivos</th><th>Concursos</th><th>%</th></tr>";
+
+    Object.keys(counts)
+        .sort((a,b)=>a-b)
+        .forEach(k=>{
+
+            html+=`
+            <tr>
+            <td>${k}</td>
+            <td>${counts[k]}</td>
+            <td>${(counts[k]/draws.length*100).toFixed(2)}%</td>
+            </tr>`;
+
+        });
+
+    html+="</table>";
+
+    document.getElementById("sequenceTable").innerHTML=html;
+
+}
+
+/* ============================================================
+   COOCORRÊNCIA
+============================================================ */
+
+function calculateCorrelation(){
+
+    const pair=Array.from(
+        {length:26},
+        ()=>Array(26).fill(0)
+    );
+
+    draws.forEach(d=>{
+
+        for(let i=0;i<d.length;i++){
+
+            for(let j=i+1;j<d.length;j++){
+
+                const a=d[i];
+                const b=d[j];
+
+                pair[a][b]++;
+                pair[b][a]++;
+
+            }
+
+        }
+
+    });
+
+    analysis.pair=pair;
+
+    const pairs=[];
+
+    for(let a=1;a<=25;a++){
+
+        for(let b=a+1;b<=25;b++){
+
+            pairs.push({
+                a,b,
+                count:pair[a][b]
+            });
+
+        }
+
+    }
+
+    pairs.sort((x,y)=>y.count-x.count);
+
+    let html="<table><tr><th>Par</th><th>Ocorrências</th></tr>";
+
+    pairs.slice(0,30).forEach(p=>{
+
+        html+=`
+        <tr>
+        <td>${String(p.a).padStart(2,"0")} + ${String(p.b).padStart(2,"0")}</td>
+        <td>${p.count}</td>
+        </tr>`;
+
+    });
+
+    html+="</table>";
+
+    document.getElementById("correlationTable").innerHTML=html;
+
+}
+
+/* ============================================================
+   MONTE CARLO
+============================================================ */
+
+function theoreticalDraw(){
+
+    return randomDraw();
+
+}
+
+function drawProperties(draw){
+
+    const sum=draw.reduce((a,b)=>a+b,0);
+
+    const odd=draw.filter(n=>n%2).length;
+
+    const consecutive=consecutiveCount(draw);
+
+    return {
+        sum,
+        odd,
+        consecutive
+    };
+
+}
+
+function runMonteCarlo(){
+
+    if(draws.length<10){
+
+        alert("Carregue pelo menos 10 concursos.");
+
+        return;
+
+    }
+
+    const N=Number(document.getElementById("simulations").value);
+
+    log(`Iniciando Monte Carlo com ${N} simulações.`);
+
+    const realSums=draws.map(d=>drawProperties(d).sum);
+    const realOdd=draws.map(d=>drawProperties(d).odd);
+    const realRep=analysis.repeats||[];
+
+    const simulatedSums=[];
+    const simulatedOdd=[];
+    const simulatedRep=[];
+
+    let previous=null;
+
+    for(let i=0;i<N;i++){
+
+        const d=theoreticalDraw();
+        const p=drawProperties(d);
+
+        simulatedSums.push(p.sum);
+        simulatedOdd.push(p.odd);
+
+        if(previous){
+
+            simulatedRep.push(overlap(previous,d));
+
+        }
+
+        previous=d;
+
+    }
+
+    const realMeanSum=mean(realSums);
+    const simMeanSum=mean(simulatedSums);
+
+    const realMeanOdd=mean(realOdd);
+    const simMeanOdd=mean(simulatedOdd);
+
+    const realMeanRep=mean(realRep);
+    const simMeanRep=mean(simulatedRep);
+
+    const zSum=
+        (realMeanSum-simMeanSum)/
+        (std(simulatedSums)/Math.sqrt(Math.max(1,draws.length)));
+
+    const zOdd=
+        (realMeanOdd-simMeanOdd)/
+        (std(simulatedOdd)/Math.sqrt(Math.max(1,draws.length)));
+
+    const zRep=
+        (realMeanRep-simMeanRep)/
+        (std(simulatedRep)/Math.sqrt(Math.max(1,draws.length-1)));
+
+    analysis.monteCarlo={
+        N,
+        zSum,
+        zOdd,
+        zRep,
+        realMeanSum,
+        simMeanSum,
+        realMeanOdd,
+        simMeanOdd,
+        realMeanRep,
+        simMeanRep
+    };
+
+    document.getElementById("monteResult").innerHTML=`
+
+    <div class="grid">
+
+    <div class="card">
+    Soma real
+    <div class="value">${realMeanSum.toFixed(2)}</div>
+    <div class="small">Simulada: ${simMeanSum.toFixed(2)}</div>
+    </div>
+
+    <div class="card">
+    Ímpares reais
+    <div class="value">${realMeanOdd.toFixed(2)}</div>
+    <div class="small">Simulada: ${simMeanOdd.toFixed(2)}</div>
+    </div>
+
+    <div class="card">
+    Repetição real
+    <div class="value">${realMeanRep.toFixed(2)}</div>
+    <div class="small">Simulada: ${simMeanRep.toFixed(2)}</div>
+    </div>
+
+    <div class="card">
+    Z soma
+    <div class="value">${zSum.toFixed(3)}</div>
+    </div>
+
+    <div class="card">
+    Z ímpares
+    <div class="value">${zOdd.toFixed(3)}</div>
+    </div>
+
+    <div class="card">
+    Z repetição
+    <div class="value">${zRep.toFixed(3)}</div>
+    </div>
+
+    </div>
+
+    <div class="warningBox">
+    Um Z alto pode indicar diferença estatística em relação ao modelo simulado,
+    mas não identifica a causa da diferença.
+    </div>
+    `;
+
+    calculateHitDistribution(N);
+
+    log("Monte Carlo concluído.");
+
+}
+
+/* ============================================================
+   DISTRIBUIÇÃO DE ACERTOS
+============================================================ */
+
+function calculateHitDistribution(N){
+
+    const observed={};
+
+    for(let k=0;k<=15;k++)observed[k]=0;
+
+    /*
+      Para medir "proximidade", usamos cada concurso anterior
+      como referência e uma grande quantidade de jogos aleatórios.
+    */
+
+    const sample=Math.min(200,draws.length);
+
+    for(let i=draws.length-sample;i<draws.length;i++){
+
+        const actual=draws[i];
+
+        const gamesPerDraw=Math.max(
+            50,
+            Math.floor(N/sample)
+        );
+
+        for(let g=0;g<gamesPerDraw;g++){
+
+            const ticket=randomDraw();
+
+            const h=overlap(ticket,actual);
+
+            observed[h]++;
+
+        }
+
+    }
+
+    analysis.hitDistribution=observed;
+
+    let html="<table><tr><th>Acertos</th><th>Ocorrências</th></tr>";
+
+    for(let k=0;k<=15;k++){
+
+        html+=`
+        <tr>
+        <td>${k}</td>
+        <td>${observed[k]}</td>
+        </tr>`;
+
+    }
+
+    html+="</table>";
+
+    document.getElementById("hitResult").innerHTML=html;
+
+    drawBarChart(
+        "hitChart",
+        Object.values(observed),
+        Object.keys(observed)
+    );
+
+}
+
+/* ============================================================
+   AUTOCORRELAÇÃO
+============================================================ */
+
+function calculateAutocorrelation(){
+
+    const series=[];
+
+    for(const d of draws){
+
+        for(let n=1;n<=25;n++){
+
+            series.push(d.includes(n)?1:0);
+
+        }
+
+    }
+
+    /*
+      Autocorrelação por concurso:
+      média das dezenas comuns entre concursos separados por lag.
+    */
+
+    const results=[];
+
+    for(let lag=1;lag<=20 && lag<draws.length;lag++){
+
+        const values=[];
+
+        for(let i=lag;i<draws.length;i++){
+
+            values.push(
+                overlap(draws[i],draws[i-lag])
+            );
+
+        }
+
+        results.push({
+            lag,
+            mean:mean(values)
+        });
+
+    }
+
+    analysis.autocorrelation=results;
+
+    let html="<table><tr><th>Lag</th><th>Repetição média</th></tr>";
+
+    results.forEach(x=>{
+
+        html+=`
+        <tr>
+        <td>${x.lag}</td>
+        <td>${x.mean.toFixed(4)}</td>
+        </tr>`;
+
+    });
+
+    html+="</table>";
+
+    document.getElementById("autocorrelation").innerHTML=html;
+
+}
+
+/* ============================================================
+   RANKING
+============================================================ */
+
+function calculateRanking(){
+
+    const f=analysis.frequency;
+    const rf=analysis.recentFrequency;
+    const delays=analysis.delays;
+
+    const total=draws.length;
+    const recentN=Math.min(
+        Number(document.getElementById("window").value),
+        total
+    );
+
+    const scores=[];
+
+    for(let n=1;n<=25;n++){
+
+        const globalRate=f[n]/total;
+
+        const recentRate=rf[n]/recentN;
+
+        /*
+          O atraso recebe peso baixo deliberadamente.
+          "Atrasado" não significa matematicamente que esteja
+          mais próximo de sair.
+        */
+
+        const delayScore=
+            Math.min(delays[n]/20,1);
+
+        const score=
+            globalRate*45+
+            recentRate*40+
+            delayScore*15;
+
+        scores.push({
+            n,
+            score
+        });
+
+    }
+
+    scores.sort((a,b)=>b.score-a.score);
+
+    analysis.ranking=scores;
+
+    let html="<table><tr><th>#</th><th>Dezena</th><th>Score</th><th>Freq.</th><th>Recente</th><th>Atraso</th></tr>";
+
+    scores.forEach((x,i)=>{
+
+        html+=`
+        <tr>
+        <td>${i+1}</td>
+        <td>${String(x.n).padStart(2,"0")}</td>
+        <td>${x.score.toFixed(3)}</td>
+        <td>${f[x.n]}</td>
+        <td>${rf[x.n]}</td>
+        <td>${delays[x.n]}</td>
+        </tr>`;
+
+    });
+
+    html+="</table>";
+
+    document.getElementById("ranking").innerHTML=html;
+
+}
+
+/* ============================================================
+   BACKTEST
+============================================================ */
+
+function chooseModelGame(history){
+
+    const f=frequency(history);
+
+    const recent=frequency(
+        history.slice(-Math.min(50,history.length))
+    );
+
+    const scores=[];
+
+    for(let n=1;n<=25;n++){
+
+        scores.push({
+
+            n,
+
+            score:
+                (f[n]/history.length)*50+
+                (recent[n]/Math.min(50,history.length))*50
+
+        });
+
+    }
+
+    scores.sort((a,b)=>b.score-a.score);
+
+    return scores
+        .slice(0,15)
+        .map(x=>x.n)
+        .sort((a,b)=>a-b);
+
+}
+
+function runBacktest(){
+
+    if(draws.length<100){
+
+        alert("Para um backtest mais útil, carregue pelo menos 100 concursos.");
+
+        return;
+
+    }
+
+    const games=Number(document.getElementById("games").value);
+
+    const hitsModel=[];
+    const hitsRandom=[];
+
+    const start=50;
+
+    for(let i=start;i<draws.length;i++){
+
+        const history=draws.slice(0,i);
+
+        const actual=draws[i];
+
+        for(let g=0;g<games;g++){
+
+            /*
+              Pequena variação do modelo:
+              embaralhamos pesos entre as dezenas e selecionamos.
+            */
+
+            const f=frequency(history);
+            const recent=frequency(
+                history.slice(-Math.min(50,history.length))
+            );
+
+            const scored=[];
+
+            for(let n=1;n<=25;n++){
+
+                scored.push({
+
+                    n,
+
+                    score:
+                        (f[n]/history.length)*0.5+
+                        (recent[n]/Math.min(50,history.length))*0.5+
+                        Math.random()*0.02
+
+                });
+
+            }
+
+            scored.sort((a,b)=>b.score-a.score);
+
+            const game=scored
+                .slice(0,15)
+                .map(x=>x.n);
+
+            hitsModel.push(overlap(game,actual));
+
+            hitsRandom.push(
+                overlap(randomDraw(),actual)
+            );
+
+        }
+
+    }
+
+    function distribution(arr){
+
+        const d={};
+
+        for(let k=0;k<=15;k++)d[k]=0;
+
+        arr.forEach(x=>d[x]++);
+
+        return d;
+
+    }
+
+    const dm=distribution(hitsModel);
+    const dr=distribution(hitsRandom);
+
+    analysis.backtest={
+        model:dm,
+        random:dr,
+        modelMean:mean(hitsModel),
+        randomMean:mean(hitsRandom)
+    };
+
+    let html=`
+
+    <div class="grid">
+
+    <div class="card">
+    Média do modelo
+    <div class="value">${mean(hitsModel).toFixed(3)}</div>
+    </div>
+
+    <div class="card">
+    Média aleatória
+    <div class="value">${mean(hitsRandom).toFixed(3)}</div>
+    </div>
+
+    <div class="card">
+    Diferença
+    <div class="value">
+    ${(mean(hitsModel)-mean(hitsRandom)).toFixed(3)}
+    </div>
+    </div>
+
+    </div>
+
+    <table>
+    <tr>
+    <th>Acertos</th>
+    <th>Modelo</th>
+    <th>Aleatório</th>
+    </tr>
+    `;
+
+    for(let k=0;k<=15;k++){
+
+        html+=`
+        <tr>
+        <td>${k}</td>
+        <td>${dm[k]}</td>
+        <td>${dr[k]}</td>
+        </tr>`;
+
+    }
+
+    html+="</table>";
+
+    html+=`
+    <div class="warningBox">
+    O backtest é uma comparação experimental. Uma pequena diferença
+    não demonstra vantagem real. O ideal é repetir a validação em
+    períodos separados e fora da amostra.
+    </div>
+    `;
+
+    document.getElementById("backtestResult").innerHTML=html;
+
+    log("Backtest concluído.");
+
+}
+
+/* ============================================================
+   GERADOR EXPERIMENTAL
+============================================================ */
+
+function generateGames(){
+
+    if(!analysis.ranking){
+
+        alert("Execute a análise primeiro.");
+
+        return;
+
+    }
+
+    const ranked=analysis.ranking;
+
+    const games=[];
+
+    for(let g=0;g<10;g++){
+
+        /*
+          Em vez de simplesmente pegar os 15 primeiros,
+          introduzimos pequena diversificação.
+        */
+
+        const pool=ranked
+            .slice(0,20)
+            .map(x=>x.n);
+
+        let game=[];
+
+        while(game.length<15){
+
+            const n=
+                pool[Math.floor(Math.random()*pool.length)];
+
+            if(!game.includes(n))game.push(n);
+
+        }
+
+        game.sort((a,b)=>a-b);
+
+        games.push(game);
+
+    }
+
+    let html="";
+
+    games.forEach((g,i)=>{
+
+        html+=`
+        <div class="card" style="margin-top:10px">
+
+        <b>Jogo ${i+1}</b><br><br>
+
+        ${g.map(n=>
+            `<span class="number">${String(n).padStart(2,"0")}</span>`
+        ).join("")}
+
+        </div>
+        `;
+
+    });
+
+    document.getElementById("gamesOutput").innerHTML=html;
+
+}
+
+/* ============================================================
+   GRÁFICOS
+============================================================ */
+
+function drawBarChart(id,data,labels){
+
+    const canvas=document.getElementById(id);
+
+    const ctx=canvas.getContext("2d");
+
+    const w=canvas.width;
+    const h=canvas.height;
+
+    ctx.clearRect(0,0,w,h);
+
+    if(!data.length)return;
+
+    const max=Math.max(...data);
+
+    const marginLeft=45;
+    const marginBottom=45;
+    const chartW=w-marginLeft-20;
+    const chartH=h-marginBottom-20;
+
+    const bw=chartW/data.length;
+
+    ctx.strokeStyle="#5d6a8d";
+    ctx.beginPath();
+    ctx.moveTo(marginLeft,20);
+    ctx.lineTo(marginLeft,h-marginBottom);
+    ctx.lineTo(w-20,h-marginBottom);
+    ctx.stroke();
+
+    data.forEach((value,i)=>{
+
+        const barH=
+            max===0
+            ?0
+            :(value/max)*chartH;
+
+        const x=
+            marginLeft+
+            i*bw+
+            bw*0.15;
+
+        const y=
+            h-marginBottom-barH;
+
+        ctx.fillStyle="#315efb";
+
+        ctx.fillRect(
+            x,
+            y,
+            bw*0.7,
+            barH
+        );
+
+        ctx.fillStyle="#dfe5f5";
+        ctx.font="11px Arial";
+
+        ctx.save();
+
+        ctx.translate(
+            x+bw*0.35,
+            h-marginBottom+15
+        );
+
+        ctx.rotate(-Math.PI/4);
+
+        ctx.fillText(
+            labels[i],
+            0,
+            0
+        );
+
+        ctx.restore();
+
+    });
+
+}
+
+/* ============================================================
+   SCORE DE ANOMALIA
+============================================================ */
+
+function calculateAnomalyScore(){
+
+    const mc=analysis.monteCarlo;
+
+    if(!mc){
+
+        document.getElementById("anomalyScore").textContent="-";
+
+        return;
+
+    }
+
+    const values=[
+        Math.abs(mc.zSum),
+        Math.abs(mc.zOdd),
+        Math.abs(mc.zRep)
+    ];
+
+    /*
+      Não transforma Z em "probabilidade de fraude".
+      É somente um indicador exploratório.
+    */
+
+    const score=
+        clamp(
+            mean(values)/3*100,
+            0,
+            100
+        );
+
+    analysis.anomalyScore=score;
+
+    document.getElementById("anomalyScore").textContent=
+        score.toFixed(1);
+
+    let message="";
+
+    if(score<25){
+
+        message=`
+        <div class="successBox">
+        As propriedades analisadas estão relativamente próximas
+        das simulações utilizadas como referência.
+        </div>`;
+
+    }else if(score<50){
+
+        message=`
+        <div class="warningBox">
+        Existem diferenças moderadas em algumas métricas.
+        Isso não demonstra manipulação.
+        </div>`;
+
+    }else{
+
+        message=`
+        <div class="dangerBox">
+        O conjunto apresenta diferenças estatísticas que merecem
+        investigação adicional. Isso NÃO identifica a causa da diferença
+        e não constitui evidência de manipulação por si só.
+        </div>`;
+
+    }
+
+    document.getElementById("interpretation").innerHTML=message;
+
+}
+
+/* ============================================================
+   ANÁLISE COMPLETA
+============================================================ */
+
+async function runFullAnalysis(){
+
+    if(draws.length<20){
+
+        alert("Carregue pelo menos 20 concursos.");
+
+        return;
+
+    }
+
+    document.getElementById("log").textContent="";
+
+    log("=== INÍCIO DA ANÁLISE ===");
+
+    progress(5,"Calculando frequência...");
+    calculateFrequency();
+
+    await sleep(50);
+
+    progress(15,"Calculando atrasos...");
+    calculateDelays();
+
+    await sleep(50);
+
+    progress(25,"Calculando repetição...");
+    calculateRepeat();
+
+    await sleep(50);
+
+    progress(35,"Calculando somas...");
+    calculateSums();
+
+    await sleep(50);
+
+    progress(45,"Calculando paridade...");
+    calculateParity();
+
+    await sleep(50);
+
+    progress(55,"Calculando sequências...");
+    calculateSequences();
+
+    await sleep(50);
+
+    progress(65,"Calculando coocorrência...");
+    calculateCorrelation();
+
+    await sleep(50);
+
+    progress(75,"Calculando autocorrelação...");
+    calculateAutocorrelation();
+
+    await sleep(50);
+
+    progress(85,"Executando Monte Carlo...");
+
+    runMonteCarlo();
+
+    await sleep(50);
+
+    progress(92,"Calculando ranking...");
+    calculateRanking();
+
+    await sleep(50);
+
+    progress(96,"Calculando índice de anomalia...");
+    calculateAnomalyScore();
+
+    progress(100,"Análise concluída.");
+
+    document.getElementById("totalDraws").textContent=draws.length;
+
+    log("=== ANÁLISE CONCLUÍDA ===");
+
+}
+
+/* ============================================================
+   EXPORTAÇÃO
+============================================================ */
+
+function exportJSON(){
+
+    const data=JSON.stringify(
+        {
+            generated:new Date().toISOString(),
+            draws:draws,
+            analysis:analysis
+        },
+        null,
+        2
+    );
+
+    download(
+        data,
+        "lotofacil_analysis.json",
+        "application/json"
+    );
+
+}
+
+function exportCSV(){
+
+    if(!analysis.ranking){
+
+        alert("Execute a análise primeiro.");
+
+        return;
+
+    }
+
+    let csv="Posicao,Dezena,Score,Frequencia,Recente,Atraso\n";
+
+    analysis.ranking.forEach((x,i)=>{
+
+        csv+=
+            `${i+1},${x.n},${x.score},`+
+            `${analysis.frequency[x.n]},`+
+            `${analysis.recentFrequency[x.n]},`+
+            `${analysis.delays[x.n]}\n`;
+
+    });
+
+    download(
+        csv,
+        "lotofacil_ranking.csv",
+        "text/csv"
+    );
+
+}
+
+function download(content,name,type){
+
+    const blob=
+        new Blob([content],{type});
+
+    const url=
+        URL.createObjectURL(blob);
+
+    const a=
+        document.createElement("a");
+
+    a.href=url;
+    a.download=name;
+
+    document.body.appendChild(a);
+
+    a.click();
+
+    a.remove();
+
+    URL.revokeObjectURL(url);
+
+}
+
+/* ============================================================
+   UTILIDADE
+============================================================ */
+
+function sleep(ms){
+
+    return new Promise(
+        resolve=>setTimeout(resolve,ms)
+    );
+
+}
+
+</script>
+
 </body>
 </html>
